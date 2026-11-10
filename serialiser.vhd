@@ -19,7 +19,7 @@ end serialiser;
 architecture rtl of serialiser is
   signal r_data		: std_logic_vector(7 downto 0);
 
-  type	 t_SM_state is (s_IDLE, s_SHIFTING, s_EOB);
+  type	 t_SM_state is (s_START, s_SHIFTING, s_EOB);
   signal r_state	: t_SM_state;
 
   signal r_so_i	: integer range 0 to 9; -- shift out iterator count
@@ -39,12 +39,12 @@ begin
         r_serial_clk_active <= '0';
         r_serial_out <= '0';
         r_eob_out <= '0';
-        r_state <= s_IDLE;
+        r_state <= s_START;
         r_so_i <= 0;
         
       elsif i_enb = '1' then
         case r_state is
-          when s_IDLE =>
+          when s_START=>
             r_data <= i_data;
             r_serial_clk_active <= '0';
             r_serial_out <= '0';
@@ -54,6 +54,7 @@ begin
 
           when s_SHIFTING =>
             r_serial_clk_active <= '1';
+            r_eob_out <= '0';
             r_serial_out <= r_data(7 - r_so_i);
             r_so_i <= r_so_i + 1;
             if r_so_i > 6 then
@@ -61,13 +62,15 @@ begin
             end if;
 
           when s_EOB =>
+            r_data <= i_data;
             r_eob_out <= '1';
             r_serial_clk_active <= '0';
             r_serial_out <= '0';
-            r_state <= s_IDLE;
+            r_so_i <= 0;
+            r_state <= s_SHIFTING;
 
           when others =>
-            r_state <= s_IDLE;
+            r_state <= s_START;
         end case;
       end if;
     end if;
